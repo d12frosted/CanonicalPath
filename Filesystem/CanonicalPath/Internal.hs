@@ -29,7 +29,10 @@ instance Monoid b => Monoid (Either a b) where
   mappend (Right a)(Right b) = Right $ mappend a b
 
 canonicalize :: UnsafePath -> IO SafePath
-canonicalize fp =
+canonicalize fp = extractPath fp >>= either (return . Left) (canonicalize')
+
+canonicalize' :: UnsafePath -> IO SafePath
+canonicalize' fp =
   do exists <- liftM2 (||) (doesFileExist . toPrelude $ fp) (doesDirectoryExist . toPrelude $ fp)
      if exists
         then liftM Right (pathMap canonicalizePath fp)
@@ -51,6 +54,7 @@ tryEnvPosix x = when' (hasPrefix "$" x) (Just . getEnv . pathTail $ x)
 -- TODO: define
 tryEnvWindows :: Parser
 tryEnvWindows _ = Nothing
+
 
 tryHome :: Parser
 tryHome x = when' (textToPath "~" == x) (Just $ liftM Right homeDirectory)
