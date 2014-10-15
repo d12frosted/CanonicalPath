@@ -5,15 +5,11 @@ module Filesystem.CanonicalPath.Internal (CanonicalPath(..)
                                          ,canonicalPathM
                                          ,canonicalPathE
                                          ,unsafePath
-
-
                                          ,UnsafePath
                                          ,SafePath
-
                                          ,Filesystem.CanonicalPath.Internal.readFile
                                          ,Filesystem.CanonicalPath.Internal.writeFile
                                          ,Filesystem.CanonicalPath.Internal.appendFile
-
                                          ,preludeMap
                                          ,pathToText
                                          ,textToPath
@@ -43,18 +39,57 @@ instance Show CanonicalPath where
                shows (toText path))
     where toText (CanonicalPath p) = pathToText p
 
+{-|
+Unsafe constructor of @CanonicalPath@. In case of any problem it will @error@.
+
+Example:
+
+>>> canonicalPath "$HOME"
+CanonicalPath "/Users/your-user-name"
+
+>>> canonicalPath "unknown"
+*** Exception: Path does not exist (no such file or directory): unknown
+
+/Since 0.1.0.0/
+-}
 canonicalPath :: UnsafePath -> IO CanonicalPath
 canonicalPath path = canonicalize path >>= either (error . textToString) (return . CanonicalPath)
 
+{-|
+Constucts @Maybe CanonicalPath@.
+
+>>> canonicalPathM "~"
+Just CanonicalPath "Users/your-user-name"
+
+>>> canonicalPathM "unknown"
+Nothing
+
+/Since 0.1.0.0/
+-}
 canonicalPathM :: UnsafePath -> IO (Maybe CanonicalPath)
 canonicalPathM path = canonicalize path >>= either (\_ -> return Nothing) (return . Just . CanonicalPath)
 
+{-|
+Constructs @Either Text CanonicalPath@.
+
+>>> canonicalPathE "~/"
+Right CanonicalPath "/Users/your-user-name"
+
+>>> canonicalPathE "$HOME/this-folder-does-not-exist"
+Left "Path does not exist (no such file or directory): /Users/your-user-name/this-folder-does-not-exist"
+
+/Since 0.1.0.0/
+-}
 canonicalPathE :: UnsafePath -> IO (Either Text CanonicalPath)
 canonicalPathE path = canonicalize path >>= either (return . Left) (return . Right . CanonicalPath)
 
+-- | Convert @CanonicalPath@ to @Filesystem.FilePath@.
+--
+-- /Since 0.1.0.0/
 unsafePath :: CanonicalPath -> UnsafePath
 unsafePath (CanonicalPath up) = up
 
+-- | Synonym of @FilePath@ from @Filesystem.Path@ module.
 type UnsafePath = FilePath.FilePath
 type SafePath = Either Text UnsafePath
 
@@ -76,12 +111,21 @@ extractAtom atom = tryEnvPosix <||> tryEnvWindows <||> tryHome <%> atom
 
 -- file operations
 
+-- | @'readFile' file@ function reads a /file/ and returns the contents of the /file/ as a @'Text'@. The /file/ is read lazily, on demand, as with getContents.
+--
+-- /Since 0.1.1.0/
 readFile :: CanonicalPath -> IO Text
 readFile = BasicPrelude.readFile . unsafePath
 
+-- | @'writeFile' file txt@ writes /txt/ to the /file/.
+--
+-- /Since 0.1.1.0/
 writeFile :: CanonicalPath -> Text -> IO ()
 writeFile = BasicPrelude.writeFile . unsafePath
 
+-- | @'appendFile' file txt@ appends /txt/ to the /file/.
+--
+-- /Since 0.1.1.0/
 appendFile :: CanonicalPath -> Text -> IO ()
 appendFile = BasicPrelude.appendFile . unsafePath
 
