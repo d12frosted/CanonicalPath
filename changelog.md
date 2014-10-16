@@ -1,3 +1,8 @@
+0.1.2.0
+    * add writeFile'
+    * add some type conversion functions
+    * update documentation
+
 0.1.1.0:
     * Filesystem.CanonicalPath.Directory implementation
     * Add documentation

@@ -9,6 +9,7 @@ module Filesystem.CanonicalPath.Internal (CanonicalPath(..)
                                          ,SafePath
                                          ,Filesystem.CanonicalPath.Internal.readFile
                                          ,Filesystem.CanonicalPath.Internal.writeFile
+                                         ,writeFile'
                                          ,Filesystem.CanonicalPath.Internal.appendFile
                                          ,preludeMap
                                          ,pathToText
@@ -56,7 +57,7 @@ canonicalPath :: UnsafePath -> IO CanonicalPath
 canonicalPath path = canonicalize path >>= either (error . textToString) (return . CanonicalPath)
 
 {-|
-Constucts @Maybe CanonicalPath@.
+Constructs @Maybe CanonicalPath@.
 
 >>> canonicalPathM "~"
 Just CanonicalPath "Users/your-user-name"
@@ -90,8 +91,12 @@ unsafePath :: CanonicalPath -> UnsafePath
 unsafePath (CanonicalPath up) = up
 
 -- | Synonym of @FilePath@ from @Filesystem.Path@ module.
+--
+-- /Since 0.1.0.0/
 type UnsafePath = FilePath.FilePath
 type SafePath = Either Text UnsafePath
+
+-- * Functions used for canonicalization
 
 canonicalize :: UnsafePath -> IO SafePath
 canonicalize fp = extractPath fp >>= either (return . Left) canonicalize'
@@ -109,27 +114,7 @@ extractPath = liftM concatPath . mapM extractAtom . FilePath.splitDirectories
 extractAtom :: UnsafePath -> IO SafePath
 extractAtom atom = tryEnvPosix <||> tryEnvWindows <||> tryHome <%> atom
 
--- file operations
-
--- | @'readFile' file@ function reads a /file/ and returns the contents of the /file/ as a @'Text'@. The /file/ is read lazily, on demand, as with getContents.
---
--- /Since 0.1.1.0/
-readFile :: CanonicalPath -> IO Text
-readFile = BasicPrelude.readFile . unsafePath
-
--- | @'writeFile' file txt@ writes /txt/ to the /file/.
---
--- /Since 0.1.1.0/
-writeFile :: CanonicalPath -> Text -> IO ()
-writeFile = BasicPrelude.writeFile . unsafePath
-
--- | @'appendFile' file txt@ appends /txt/ to the /file/.
---
--- /Since 0.1.1.0/
-appendFile :: CanonicalPath -> Text -> IO ()
-appendFile = BasicPrelude.appendFile . unsafePath
-
--- Parsers and parser combinators
+-- * Parsers and parser combinators
 
 type Parser = UnsafePath -> Maybe (IO SafePath)
 
@@ -151,7 +136,33 @@ p1 <||> p2 = \v -> p1 v <|> p2 v
 (<%>) :: Parser -> UnsafePath -> IO SafePath
 p <%> v = fromMaybe (return . Right $ v) (p v)
 
--- Utilities
+-- * File operations
+
+-- | @'readFile' file@ function reads a /file/ and returns the contents of the /file/ as a @'Text'@. The /file/ is read lazily, on demand, as with getContents.
+--
+-- /Since 0.1.1.0/
+readFile :: CanonicalPath -> IO Text
+readFile = BasicPrelude.readFile . unsafePath
+
+-- | @'writeFile' file txt@ writes /txt/ to the /file/.
+--
+-- /Since 0.1.1.0/
+writeFile :: CanonicalPath -> Text -> IO ()
+writeFile = BasicPrelude.writeFile . unsafePath
+
+-- | @'writeFile'' dir file txt@ writes /txt/ to the /dir\/file/. Useful, when the file isn't created yet or you don't sure if it exists.
+--
+-- /Since 0.1.2.0/
+writeFile' :: CanonicalPath -> UnsafePath -> Text -> IO ()
+writeFile' cp file = BasicPrelude.writeFile (unsafePath cp </> file)
+
+-- | @'appendFile' file txt@ appends /txt/ to the /file/.
+--
+-- /Since 0.1.1.0/
+appendFile :: CanonicalPath -> Text -> IO ()
+appendFile = BasicPrelude.appendFile . unsafePath
+
+-- * Utilities
 
 getEnv :: UnsafePath -> IO SafePath
 getEnv var = map (left show) tryEnv
@@ -194,19 +205,30 @@ concatPath = foldl' (<//>) (Right "")
 preludeMap :: (Prelude.FilePath -> a) -> CanonicalPath -> a
 preludeMap f = f . toPrelude . unsafePath
 
--- Type conversions
+-- * Type conversions
 
+-- | @'pathToText' path@ converts 'UnsafePath' /path/ to 'Text'. In case of eny problems it will throw error.
+--
+-- See 'Filesystem.Path.CurrentOS.toText' function for details.
+--
+-- /Since 0.1.2.0/
 pathToText :: UnsafePath -> Text
-pathToText s =
-  case FilePath.toText s of
-    Left e -> error . textToString $ e
-    Right t -> t
+pathToText = either (error . textToString) id . FilePath.toText
 
+-- | @'textToPath' txt@ converts 'Text' to 'UnsafePath'.
+--
+-- /Since 0.1.2.0/
 textToPath :: Text -> UnsafePath
 textToPath = FilePath.fromText
 
+-- | @'fromPrelude' fp'@ converts 'Prelude.FilePath' to 'UnsafePath'.
+--
+-- /Since 0.1.0.0/
 fromPrelude :: Prelude.FilePath -> UnsafePath
 fromPrelude = textToPath . Text.pack
 
+-- | @'toPrelude' up'@ converts 'UnsafePath' to 'Prelude.FilePath'.
+--
+-- /Since 0.1.0.0/
 toPrelude :: UnsafePath -> Prelude.FilePath
 toPrelude = Text.unpack . pathToText

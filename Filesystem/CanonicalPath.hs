@@ -30,7 +30,12 @@ module Filesystem.CanonicalPath
   -- * Some IO functions
   ,readFile
   ,writeFile
-  ,appendFile) where
+  ,writeFile'
+  ,appendFile
+
+  -- * Conversion functions
+  ,pathToText
+  ,textToPath) where
 
 import Filesystem.CanonicalPath.Internal
 import Prelude ()

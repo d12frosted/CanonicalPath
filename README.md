@@ -12,7 +12,7 @@ Happy Haskell Hacking!
 
 ## Documentation
 
-Add documentation can be found on [Hackage](https://hackage.haskell.org/package/system-canonicalpath).
+All documentation can be found on [Hackage](https://hackage.haskell.org/package/system-canonicalpath).
 
 ## Contribute!
 
