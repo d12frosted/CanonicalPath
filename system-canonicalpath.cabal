@@ -1,5 +1,5 @@
 name:                system-canonicalpath
-version:             0.1.2.0
+version:             0.2.0.0
 synopsis:            Abstract data type for canonical paths with pretty operations
 description:         This library provides abstract data type named 'CanonicalPath' and some useful functions for working with it. See every module's description to find out more.
 homepage:            https://github.com/d12frosted/CanonicalPath

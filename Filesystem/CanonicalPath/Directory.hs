@@ -29,11 +29,12 @@ For more information look for documentation of @'System.Directory.createDirector
 
 /Since 0.1.1.0/
 -}
-createDirectory :: CanonicalPath -- ^ base directory
+createDirectory :: MonadIO m
+                => CanonicalPath -- ^ base directory
                 -> UnsafePath -- ^ name of new directory
-                -> IO CanonicalPath -- ^ @'CanonicalPath'@ of created directory
+                -> m CanonicalPath -- ^ @'CanonicalPath'@ of created directory
 createDirectory cp dir =
-  do Directory.createDirectory $ toPrelude path
+  do liftIO . Directory.createDirectory $ toPrelude path
      return $ CanonicalPath path
   where path = unsafePath cp </> dir
 
@@ -44,12 +45,13 @@ For more information look for documentation of @'System.Directory.createDirector
 
 /Since 0.1.1.0/
 -}
-createDirectoryIfMissing :: Bool -- ^ Create its parents too?
+createDirectoryIfMissing :: MonadIO m
+                         => Bool -- ^ Create its parents too?
                          -> CanonicalPath -- ^ base directory
                          -> UnsafePath -- ^ name of new directory
-                         -> IO CanonicalPath -- ^ @'CanonicalPath'@ of created directory
+                         -> m CanonicalPath -- ^ @'CanonicalPath'@ of created directory
 createDirectoryIfMissing flag cp dir =
-  do Directory.createDirectoryIfMissing flag $ toPrelude path
+  do liftIO . Directory.createDirectoryIfMissing flag $ toPrelude path
      return $ CanonicalPath path
   where path = unsafePath cp </> dir
 
@@ -60,8 +62,8 @@ For more information look for documentation of @'System.Directory.removeDirector
 
 /Since 0.1.1.0/
 -}
-removeDirectory :: CanonicalPath -> IO ()
-removeDirectory = preludeMap Directory.removeDirectory
+removeDirectory :: MonadIO m => CanonicalPath -> m ()
+removeDirectory = liftIO . preludeMap Directory.removeDirectory
 
 {-|
 @'removeDirectoryRecursive' dir@  removes an existing directory /dir/ together with its content and all subdirectories. Be careful, if the directory contains symlinks, the function will follow them.
@@ -70,8 +72,8 @@ For more information look for documentation of @'System.Directory.removeDirector
 
 /Since 0.1.1.0/
 -}
-removeDirectoryRecursive :: CanonicalPath -> IO ()
-removeDirectoryRecursive = preludeMap Directory.removeDirectoryRecursive
+removeDirectoryRecursive :: MonadIO m => CanonicalPath -> m ()
+removeDirectoryRecursive = liftIO . preludeMap Directory.removeDirectoryRecursive
 
 {-|
 @'renameDirectory' old new@ changes the name of an existing directory from /old/ to /new/ and returns @'CanonicalPath'@ of new directory.
@@ -80,12 +82,13 @@ For more information look for documentation of @'System.Directory.renameDirector
 
 /Since 0.1.1.0/
 -}
-renameDirectory :: CanonicalPath -- ^ old directory
+renameDirectory :: MonadIO m
+                => CanonicalPath -- ^ old directory
                 -> UnsafePath -- ^ new directory (should be just name of directory)
-                -> IO CanonicalPath -- ^ @'CanonicalPath'@ of new directory
+                -> m CanonicalPath -- ^ @'CanonicalPath'@ of new directory
 renameDirectory cp p =
   do newPath <- canonicalPath $ parent p
-     Directory.renameDirectory (toPrelude . unsafePath $ cp) (toPrelude p)
+     liftIO $ Directory.renameDirectory (toPrelude . unsafePath $ cp) (toPrelude p)
      return . CanonicalPath $ unsafePath newPath </> dirname (addSlash p)
 
 {-|
@@ -95,16 +98,16 @@ For more information look for documentation of @'System.Directory.getDirectoryCo
 
 /Since 0.1.1.0/
 -}
-getDirectoryContents :: CanonicalPath -> IO [UnsafePath]
-getDirectoryContents cp = liftM (fromPrelude <$>) $ preludeMap Directory.getDirectoryContents cp
+getDirectoryContents :: MonadIO m => CanonicalPath -> m [UnsafePath]
+getDirectoryContents cp = liftIO . liftM (fromPrelude <$>) $ preludeMap Directory.getDirectoryContents cp
 
 {-|
 The same as @'getDirectoryContents'@, but returns list of @'CanonicalPath'@ instead of @'UnsafePath'@.
 
 /Since 0.1.1.0/
 -}
-getDirectoryContents' :: CanonicalPath -> IO [CanonicalPath]
-getDirectoryContents' cp = liftM (CanonicalPath . (</> ) up <$>) $ getDirectoryContents cp
+getDirectoryContents' :: MonadIO m => CanonicalPath -> m [CanonicalPath]
+getDirectoryContents' cp = liftIO . liftM (CanonicalPath . (</> ) up <$>) $ getDirectoryContents cp
   where up = unsafePath cp
 
 {- |If the operating system has a notion of current directories, 'getCurrentDirectory' returns an @'CanonicalPath'@ to the current directory of the calling process.
@@ -113,8 +116,8 @@ For more information look for documentation of @'System.Directory.getCurrentDire
 
 /Since 0.1.1.0/
 -}
-getCurrentDirectory :: IO CanonicalPath
-getCurrentDirectory = liftM (CanonicalPath . fromPrelude) Directory.getCurrentDirectory
+getCurrentDirectory :: MonadIO m => m CanonicalPath
+getCurrentDirectory = liftIO $ liftM (CanonicalPath . fromPrelude) Directory.getCurrentDirectory
 
 {-|
 If the operating system has a notion of current directories, @'setCurrentDirectory' dir@ changes the current directory of the calling process to /dir/.
@@ -123,8 +126,8 @@ For more information look for documentation of @'System.Directory.setCurrentDire
 
 /Since 0.1.1.0/
 -}
-setCurrentDirectory :: CanonicalPath -> IO ()
-setCurrentDirectory = preludeMap Directory.setCurrentDirectory
+setCurrentDirectory :: MonadIO m => CanonicalPath -> m ()
+setCurrentDirectory = liftIO . preludeMap Directory.setCurrentDirectory
 
 {-|
 Returns the current user's home directory.
@@ -133,8 +136,8 @@ For more information look for documentation of @'System.Directory.getHomeDirecto
 
 /Since 0.1.1.0/
 -}
-getHomeDirectory :: IO CanonicalPath
-getHomeDirectory = liftM (CanonicalPath . fromPrelude) Directory.getHomeDirectory
+getHomeDirectory :: MonadIO m => m CanonicalPath
+getHomeDirectory = liftIO $ liftM (CanonicalPath . fromPrelude) Directory.getHomeDirectory
 
 {-|
 Returns the @'CanonicalPath'@ of a directory in which application-specific data for the current user can be stored.  The result of 'getAppUserDataDirectory' for a given application is specific to the current user.
@@ -143,8 +146,8 @@ For more information look for documentation of @'System.Directory.getAppUserData
 
 /Since 0.1.1.0/
 -}
-getAppUserDataDirectory :: Text -> IO UnsafePath
-getAppUserDataDirectory = liftM fromPrelude . Directory.getAppUserDataDirectory . textToString
+getAppUserDataDirectory :: MonadIO m => Text -> m UnsafePath
+getAppUserDataDirectory = liftIO . liftM fromPrelude . Directory.getAppUserDataDirectory . textToString
 
 {-|
 Returns the current user's document directory.
@@ -153,8 +156,8 @@ For more information look for documentation of @'System.Directory.getUserDocumen
 
 /Since 0.1.1.0/
 -}
-getUserDocumentsDirectory :: IO CanonicalPath
-getUserDocumentsDirectory = liftM (CanonicalPath . fromPrelude) Directory.getUserDocumentsDirectory
+getUserDocumentsDirectory :: MonadIO m => m CanonicalPath
+getUserDocumentsDirectory = liftIO $ liftM (CanonicalPath . fromPrelude) Directory.getUserDocumentsDirectory
 
 {-|
 Returns the current directory for temporary files.
@@ -163,8 +166,8 @@ For more information look for documentation of @'System.Directory.getUserDocumen
 
 /Since 0.1.1.0/
 -}
-getTemporaryDirectory :: IO UnsafePath
-getTemporaryDirectory = liftM fromPrelude Directory.getTemporaryDirectory
+getTemporaryDirectory :: MonadIO m => m UnsafePath
+getTemporaryDirectory = liftIO $ liftM fromPrelude Directory.getTemporaryDirectory
 
 {-|
 'removeFile' /file/ removes the directory entry for an existing file /file/, where /file/ is not itself a directory.
@@ -173,8 +176,8 @@ For more information look for documentation of @'System.Directory.removeFile'@.
 
 /Since 0.1.1.0/
 -}
-removeFile :: CanonicalPath -> IO ()
-removeFile = preludeMap Directory.removeFile
+removeFile :: MonadIO m => CanonicalPath -> m ()
+removeFile = liftIO . preludeMap Directory.removeFile
 
 {-|
 @'renameFile' old new@ changes the name of an existing file system object from /old/ to /new/.
@@ -183,12 +186,13 @@ For more information look for documentation of @'System.Directory.renameFile'@.
 
 /Since 0.1.1.0/
 -}
-renameFile :: CanonicalPath -- ^ @'CanonicalPath'@ of file you want to rename
+renameFile :: MonadIO m
+           => CanonicalPath -- ^ @'CanonicalPath'@ of file you want to rename
            -> UnsafePath -- ^ new name of file
-           -> IO CanonicalPath -- ^ @'CanonicalPath'@ of /new/ file
+           -> m CanonicalPath -- ^ @'CanonicalPath'@ of /new/ file
 renameFile cp p =
   do newPath <- canonicalPath $ parent p
-     Directory.renameFile (toPrelude . unsafePath $ cp) (toPrelude p)
+     liftIO $ Directory.renameFile (toPrelude . unsafePath $ cp) (toPrelude p)
      return . CanonicalPath $ unsafePath newPath </> filename p
 
 {-|
@@ -198,10 +202,11 @@ For more information look for documentation of @'System.Directory.copyFile'@.
 
 /Since 0.1.1.0/
 -}
-copyFile :: CanonicalPath -- ^ @'CanonicalPath'@ of file you want to copy
+copyFile :: MonadIO m
+         => CanonicalPath -- ^ @'CanonicalPath'@ of file you want to copy
          -> UnsafePath -- ^ name of new file (actually it can be path relative to directory of /old/
-         -> IO CanonicalPath -- ^ @'CanonicalPath'@ of /new/ file
+         -> m CanonicalPath -- ^ @'CanonicalPath'@ of /new/ file
 copyFile oldFile newFile =
   do newPath <- canonicalPath $ parent newFile
-     Directory.copyFile (toPrelude . unsafePath $ oldFile) (toPrelude newFile)
+     liftIO $ Directory.copyFile (toPrelude . unsafePath $ oldFile) (toPrelude newFile)
      return . CanonicalPath $ unsafePath newPath </> filename newFile

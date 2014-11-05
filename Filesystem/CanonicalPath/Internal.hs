@@ -31,7 +31,7 @@ import           System.Directory (getHomeDirectory
                                   ,doesFileExist)
 import qualified System.Environment as SE (getEnv)
 
-data CanonicalPath = CanonicalPath UnsafePath
+newtype CanonicalPath = CanonicalPath UnsafePath
 
 instance Show CanonicalPath where
   showsPrec d path =
@@ -53,7 +53,7 @@ CanonicalPath "/Users/your-user-name"
 
 /Since 0.1.0.0/
 -}
-canonicalPath :: UnsafePath -> IO CanonicalPath
+canonicalPath :: MonadIO m => UnsafePath -> m CanonicalPath
 canonicalPath path = canonicalize path >>= either (error . textToString) (return . CanonicalPath)
 
 {-|
@@ -67,7 +67,7 @@ Nothing
 
 /Since 0.1.0.0/
 -}
-canonicalPathM :: UnsafePath -> IO (Maybe CanonicalPath)
+canonicalPathM :: MonadIO m => UnsafePath -> m (Maybe CanonicalPath)
 canonicalPathM path = canonicalize path >>= either (\_ -> return Nothing) (return . Just . CanonicalPath)
 
 {-|
@@ -81,7 +81,7 @@ Left "Path does not exist (no such file or directory): /Users/your-user-name/thi
 
 /Since 0.1.0.0/
 -}
-canonicalPathE :: UnsafePath -> IO (Either Text CanonicalPath)
+canonicalPathE :: MonadIO m => UnsafePath -> m (Either Text CanonicalPath)
 canonicalPathE path = canonicalize path >>= either (return . Left) (return . Right . CanonicalPath)
 
 -- | Convert @CanonicalPath@ to @Filesystem.FilePath@.
@@ -98,42 +98,42 @@ type SafePath = Either Text UnsafePath
 
 -- * Functions used for canonicalization
 
-canonicalize :: UnsafePath -> IO SafePath
+canonicalize :: MonadIO m => UnsafePath -> m SafePath
 canonicalize fp = extractPath fp >>= either (return . Left) canonicalize'
 
-canonicalize' :: UnsafePath -> IO SafePath
+canonicalize' :: MonadIO m => UnsafePath -> m SafePath
 canonicalize' fp =
-  do exists <- liftM2 (||) (doesFileExist . toPrelude $ fp) (doesDirectoryExist . toPrelude $ fp)
+  do exists <- liftIO $ liftM2 (||) (doesFileExist . toPrelude $ fp) (doesDirectoryExist . toPrelude $ fp)
      if exists
-        then liftM Right (pathMap canonicalizePath fp)
+        then liftIO $ liftM Right (pathMap canonicalizePath fp)
         else return . Left $ "Path does not exist (no such file or directory): " ++ pathToText fp
 
-extractPath :: UnsafePath -> IO SafePath
+extractPath :: MonadIO m => UnsafePath -> m SafePath
 extractPath = liftM concatPath . mapM extractAtom . FilePath.splitDirectories
 
-extractAtom :: UnsafePath -> IO SafePath
+extractAtom :: MonadIO m => UnsafePath -> m SafePath
 extractAtom atom = tryEnvPosix <||> tryEnvWindows <||> tryHome <%> atom
 
 -- * Parsers and parser combinators
 
-type Parser = UnsafePath -> Maybe (IO SafePath)
+type Parser m = UnsafePath -> Maybe (m SafePath)
 
-tryEnvPosix :: Parser
+tryEnvPosix :: MonadIO m => Parser m
 tryEnvPosix x = when' (hasPrefix "$" x) (Just . getEnv . pathTail $ x)
 
-tryEnvWindows :: Parser
+tryEnvWindows :: MonadIO m => Parser m
 tryEnvWindows x =
   when' (hasPrefix "%" x &&
          hasSuffix "%" x)
         (Just . getEnv . pathTail . pathInit $ x)
 
-tryHome :: Parser
+tryHome :: MonadIO m => Parser m
 tryHome x = when' (textToPath "~" == x) (Just $ liftM Right homeDirectory)
 
-(<||>) :: Parser -> Parser -> Parser
+(<||>) :: MonadIO m => Parser m -> Parser m -> Parser m
 p1 <||> p2 = \v -> p1 v <|> p2 v
 
-(<%>) :: Parser -> UnsafePath -> IO SafePath
+(<%>) :: MonadIO m => Parser m -> UnsafePath -> m SafePath
 p <%> v = fromMaybe (return . Right $ v) (p v)
 
 -- * File operations
@@ -141,43 +141,43 @@ p <%> v = fromMaybe (return . Right $ v) (p v)
 -- | @'readFile' file@ function reads a /file/ and returns the contents of the /file/ as a @'Text'@. The /file/ is read lazily, on demand, as with getContents.
 --
 -- /Since 0.1.1.0/
-readFile :: CanonicalPath -> IO Text
-readFile = BasicPrelude.readFile . unsafePath
+readFile :: MonadIO m => CanonicalPath -> m Text
+readFile = liftIO . BasicPrelude.readFile . unsafePath
 
 -- | @'writeFile' file txt@ writes /txt/ to the /file/.
 --
 -- /Since 0.1.1.0/
-writeFile :: CanonicalPath -> Text -> IO ()
-writeFile = BasicPrelude.writeFile . unsafePath
+writeFile :: MonadIO m => CanonicalPath -> Text -> m ()
+writeFile p = liftIO . BasicPrelude.writeFile (unsafePath p)
 
 -- | @'writeFile'' dir file txt@ writes /txt/ to the /dir\/file/. Useful, when the file isn't created yet or you don't sure if it exists.
 --
 -- /Since 0.1.2.0/
-writeFile' :: CanonicalPath -> UnsafePath -> Text -> IO ()
-writeFile' cp file = BasicPrelude.writeFile (unsafePath cp </> file)
+writeFile' :: MonadIO m => CanonicalPath -> UnsafePath -> Text -> m ()
+writeFile' cp file = liftIO . BasicPrelude.writeFile (unsafePath cp </> file)
 
 -- | @'appendFile' file txt@ appends /txt/ to the /file/.
 --
 -- /Since 0.1.1.0/
-appendFile :: CanonicalPath -> Text -> IO ()
-appendFile = BasicPrelude.appendFile . unsafePath
+appendFile :: MonadIO m => CanonicalPath -> Text -> m ()
+appendFile p = liftIO . BasicPrelude.appendFile (unsafePath p)
 
 -- * Utilities
 
-getEnv :: UnsafePath -> IO SafePath
-getEnv var = map (left show) tryEnv
+getEnv :: MonadIO m => UnsafePath -> m SafePath
+getEnv var = liftM (left show) tryEnv
   where env = pathMap SE.getEnv
-        tryEnv :: IO (Either IOException UnsafePath)
-        tryEnv = try . env $ var
+        tryEnv :: MonadIO m => m (Either IOException UnsafePath)
+        tryEnv = liftIO . try . env $ var
 
-homeDirectory :: IO UnsafePath
-homeDirectory = fromPrelude <$> getHomeDirectory
+homeDirectory :: MonadIO m => m UnsafePath
+homeDirectory = liftIO $ fromPrelude <$> getHomeDirectory
 
 when' :: Alternative f => Bool -> f a -> f a
 when' b v = if b then v else Applicative.empty
 
-pathMap :: (Prelude.FilePath -> IO Prelude.FilePath) -> UnsafePath -> IO UnsafePath
-pathMap f = map fromPrelude . f . toPrelude
+pathMap :: MonadIO m => (Prelude.FilePath -> m Prelude.FilePath) -> UnsafePath -> m UnsafePath
+pathMap f p = liftM fromPrelude (f . toPrelude $ p)
 
 hasPrefix :: Text -> UnsafePath -> Bool
 hasPrefix prefix path = prefix `Text.isPrefixOf` pathToText path
