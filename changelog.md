@@ -1,3 +1,6 @@
+0.2.0.0
+    * most of functions are in `MonadIO m` now instead of IO
+
 0.1.2.0
     * add writeFile'
     * add some type conversion functions
