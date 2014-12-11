@@ -1,5 +1,5 @@
 0.2.0.0:
-* use MonadIO m instead of IO
+* use `MonadIO m` instead of `IO`
 
 0.1.2.0:
 * add writeFile'
