@@ -2,8 +2,11 @@
 
 module Filesystem.CanonicalPath.Internal (CanonicalPath(..)
                                          ,canonicalPath
+                                         ,canonicalPath'
                                          ,canonicalPathM
+                                         ,canonicalPathM'
                                          ,canonicalPathE
+                                         ,canonicalPathE'
                                          ,unsafePath
                                          ,UnsafePath
                                          ,SafePath
@@ -57,6 +60,14 @@ canonicalPath :: MonadIO m => UnsafePath -> m CanonicalPath
 canonicalPath path = canonicalize path >>= either (error . textToString) (return . CanonicalPath)
 
 {-|
+Version of @canonicalPath@ that takes @Text@ instead of @UnsafePath@.
+
+/Since 0.2.1.0/
+-}
+canonicalPath' :: MonadIO m => Text -> m CanonicalPath
+canonicalPath' = canonicalPath . textToPath
+
+{-|
 Constructs @Maybe CanonicalPath@.
 
 >>> canonicalPathM "~"
@@ -71,6 +82,14 @@ canonicalPathM :: MonadIO m => UnsafePath -> m (Maybe CanonicalPath)
 canonicalPathM path = canonicalize path >>= either (\_ -> return Nothing) (return . Just . CanonicalPath)
 
 {-|
+Version of @canonicalPathM@ that takes @Text@ instead of @UnsafePath@.
+
+/Since 0.2.1.0/
+-}
+canonicalPathM' :: MonadIO m => Text -> m (Maybe CanonicalPath)
+canonicalPathM' = canonicalPathM . textToPath
+
+{-|
 Constructs @Either Text CanonicalPath@.
 
 >>> canonicalPathE "~/"
@@ -83,6 +102,14 @@ Left "Path does not exist (no such file or directory): /Users/your-user-name/thi
 -}
 canonicalPathE :: MonadIO m => UnsafePath -> m (Either Text CanonicalPath)
 canonicalPathE path = canonicalize path >>= either (return . Left) (return . Right . CanonicalPath)
+
+{-|
+Version of @canonicalPathE@ that takes @Text@ instead of @UnsafePath@.
+
+/Since 0.2.1.0/
+-}
+canonicalPathE' :: MonadIO m => Text -> m (Either Text CanonicalPath)
+canonicalPathE' = canonicalPathE . textToPath
 
 -- | Convert @CanonicalPath@ to @Filesystem.FilePath@.
 --

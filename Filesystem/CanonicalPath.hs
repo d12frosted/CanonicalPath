@@ -23,8 +23,11 @@ module Filesystem.CanonicalPath
 
   -- * Constructors
   ,canonicalPath
+  ,canonicalPath'
   ,canonicalPathM
+  ,canonicalPathM'
   ,canonicalPathE
+  ,canonicalPathE'
   ,unsafePath
 
   -- * Some IO functions
