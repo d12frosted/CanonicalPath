@@ -1,5 +1,8 @@
+0.2.1.0:
+* add `CanonicalPath` constructors that works with `Text` instead of `UnsafePath`
+
 0.2.0.0:
-* use `MonadIO m` instead of `IO`
+* most of functions are in `MonadIO m` now instead of `IO`
 
 0.1.2.0:
 * add writeFile'
