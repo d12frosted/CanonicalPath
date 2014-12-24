@@ -19,7 +19,8 @@ module Filesystem.CanonicalPath.Internal (CanonicalPath(..)
                                          ,textToPath
                                          ,toPrelude
                                          ,fromPrelude
-                                         ,addSlash) where
+                                         ,addSlash
+                                         ,voidM) where
 
 import           BasicPrelude
 import           Control.Applicative as Applicative
@@ -259,3 +260,6 @@ fromPrelude = textToPath . Text.pack
 -- /Since 0.1.0.0/
 toPrelude :: UnsafePath -> Prelude.FilePath
 toPrelude = Text.unpack . pathToText
+
+voidM :: Monad m => m a -> m ()
+voidM a = a >> return ()

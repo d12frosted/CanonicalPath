@@ -8,6 +8,8 @@ Portability : portable
 
 Redefinition of some functions from @System.Directory@ module. Some of them have different signature, because they need to work with @'CanonicalPath'@. For example, we can't create functions @createDirectory :: 'CanonicalPath' -> IO ()@, because it has no sense. How can we create directory that already exists? Instead we have function @createDirectory :: 'CanonicalPath' -> 'UnsafePath' -> IO 'CanonicalPath'@, that creates new directory in base existing directory with provided name. And also it returns @'CanonicalPath'@ of newly created directory. Isn't it nice?
 
+A lot of functions come in two variants: one that returns resulting @'CanonicalPath' and second that ignores result (they end with '_' symbol).
+
 Happy Haskell Hacking!
 -}
 {-# LANGUAGE OverloadedStrings #-}
@@ -39,6 +41,14 @@ createDirectory cp dir =
   where path = unsafePath cp </> dir
 
 {-|
+Variant of @'createDirectory' that ignores resulting @'CanonicalPath'.
+
+/Since 0.2.2.0/
+-}
+createDirectory_ :: MonadIO m => CanonicalPath -> UnsafePath -> m ()
+createDirectory_ cp dir = voidM $ createDirectory cp dir
+
+{-|
 @'createDirectoryIfMissing' parents dir@ creates a new directory @dir@ in @base@ directory. If the first argument is 'True' the function will also create all parent directories if they are missing. Function returns @'CanonicalPath'@ of created directory.
 
 For more information look for documentation of @'System.Directory.createDirectoryIfMissing'@.
@@ -54,6 +64,14 @@ createDirectoryIfMissing flag cp dir =
   do liftIO . Directory.createDirectoryIfMissing flag $ toPrelude path
      return $ CanonicalPath path
   where path = unsafePath cp </> dir
+
+{-|
+Variant of @'createDirectoryIfMissing' that ignores resulting @'CanonicalPath'.
+
+/Since 0.2.2.0/
+-}
+createDirectoryIfMissing_ :: MonadIO m => Bool -> CanonicalPath -> UnsafePath -> m ()
+createDirectoryIfMissing_ flag cp dir = voidM $ createDirectoryIfMissing flag cp dir
 
 {-|
 @'removeDirectory' dir@ removes an existing directory /dir/.
@@ -92,6 +110,14 @@ renameDirectory cp p =
      return . CanonicalPath $ unsafePath newPath </> dirname (addSlash p)
 
 {-|
+Variant of @'renameDirectory' that ignores resulting @'CanonicalPath'.
+
+/Since 0.2.2.0/
+-}
+renameDirectory_ :: MonadIO m => CanonicalPath -> UnsafePath -> m ()
+renameDirectory_ cp p = voidM $ renameDirectory cp p
+
+{-|
 @'getDirectoryContents' dir@ returns a list of /all/ entries in /dir/. If you want to have list of @'CanonicalPath'@ instead use function @'getDirectoryContents''@.
 
 For more information look for documentation of @'System.Directory.getDirectoryContents'@.
@@ -109,6 +135,14 @@ The same as @'getDirectoryContents'@, but returns list of @'CanonicalPath'@ inst
 getDirectoryContents' :: MonadIO m => CanonicalPath -> m [CanonicalPath]
 getDirectoryContents' cp = liftIO . liftM (CanonicalPath . (</> ) up <$>) $ getDirectoryContents cp
   where up = unsafePath cp
+
+{-|
+The same as @'getDirectoryContents'@, but returns list of @'Text'@ instead of @'UnsafePath'@.
+
+/Since 0.2.2.0/
+-}
+getDirectoryContents'' :: MonadIO m => CanonicalPath -> m [Text]
+getDirectoryContents'' cp = liftIO . liftM (fromString <$>) $ preludeMap Directory.getDirectoryContents cp
 
 {- |If the operating system has a notion of current directories, 'getCurrentDirectory' returns an @'CanonicalPath'@ to the current directory of the calling process.
 
@@ -196,6 +230,14 @@ renameFile cp p =
      return . CanonicalPath $ unsafePath newPath </> filename p
 
 {-|
+Variant of @'renameFile' that ignores resulting @'CanonicalPath'.
+
+/Since 0.2.2.0/
+-}
+renameFile_ :: MonadIO m => CanonicalPath -> UnsafePath -> m ()
+renameFile_ cp p = voidM $ renameFile cp p
+
+{-|
 @'copyFile' old new@ copies the existing file from /old/ to /new/. If the /new/ file already exists, it is atomically replaced by the /old/ file. Neither path may refer to an existing directory.  The permissions of /old/ are copied to /new/, if possible.
 
 For more information look for documentation of @'System.Directory.copyFile'@.
@@ -210,3 +252,6 @@ copyFile oldFile newFile =
   do newPath <- canonicalPath $ parent newFile
      liftIO $ Directory.copyFile (toPrelude . unsafePath $ oldFile) (toPrelude newFile)
      return . CanonicalPath $ unsafePath newPath </> filename newFile
+
+copyFile_ :: MonadIO m => CanonicalPath -> UnsafePath -> m ()
+copyFile_ oldFile newFile = voidM $ copyFile oldFile newFile

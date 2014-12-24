@@ -1,3 +1,6 @@
+0.2.2.0:
+* add functions that return unit instead of `CanonicalPath` to `Directory` module
+
 0.2.1.0:
 * add `CanonicalPath` constructors that works with `Text` instead of `UnsafePath`
 
