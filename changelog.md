@@ -1,3 +1,7 @@
+0.2.3.0:
+* add `cpathToText` that converts `CanonicalPath` to `Text`
+* update base version constraints
+
 0.2.2.0:
 * add functions that return unit instead of `CanonicalPath` to `Directory` module
 

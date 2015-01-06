@@ -38,7 +38,8 @@ module Filesystem.CanonicalPath
 
   -- * Conversion functions
   ,pathToText
-  ,textToPath) where
+  ,textToPath
+  ,cpathToText) where
 
 import Filesystem.CanonicalPath.Internal
 import Prelude ()

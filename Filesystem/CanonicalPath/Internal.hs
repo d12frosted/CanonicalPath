@@ -17,6 +17,7 @@ module Filesystem.CanonicalPath.Internal (CanonicalPath(..)
                                          ,preludeMap
                                          ,pathToText
                                          ,textToPath
+                                         ,cpathToText
                                          ,toPrelude
                                          ,fromPrelude
                                          ,addSlash
@@ -248,6 +249,12 @@ pathToText = either (error . textToString) id . FilePath.toText
 -- /Since 0.1.2.0/
 textToPath :: Text -> UnsafePath
 textToPath = FilePath.fromText
+
+-- | @'cpathToText' path@ converts 'CanonicalPath' to 'Text'.
+--
+-- /Since 0.2.3.0/
+cpathToText :: CanonicalPath -> Text
+cpathToText = pathToText . unsafePath
 
 -- | @'fromPrelude' fp'@ converts 'Prelude.FilePath' to 'UnsafePath'.
 --
