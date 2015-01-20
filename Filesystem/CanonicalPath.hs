@@ -16,10 +16,12 @@ Oh, and last but not least, @CanonicalPath@ constructor extracts all environment
 
 Happy Haskell Hacking!
 -}
+
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Filesystem.CanonicalPath
   (-- * Abstract Type
    CanonicalPath
-  ,UnsafePath
 
   -- * Constructors
   ,canonicalPath
@@ -37,9 +39,8 @@ module Filesystem.CanonicalPath
   ,appendFile
 
   -- * Conversion functions
-  ,pathToText
-  ,textToPath
-  ,cpathToText) where
+  ,fromText
+  ,toText
+  ,toText') where
 
 import Filesystem.CanonicalPath.Internal
-import Prelude ()

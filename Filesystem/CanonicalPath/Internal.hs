@@ -8,16 +8,15 @@ module Filesystem.CanonicalPath.Internal (CanonicalPath(..)
                                          ,canonicalPathE
                                          ,canonicalPathE'
                                          ,unsafePath
-                                         ,UnsafePath
                                          ,SafePath
                                          ,Filesystem.CanonicalPath.Internal.readFile
                                          ,Filesystem.CanonicalPath.Internal.writeFile
                                          ,writeFile'
                                          ,Filesystem.CanonicalPath.Internal.appendFile
                                          ,preludeMap
-                                         ,pathToText
-                                         ,textToPath
-                                         ,cpathToText
+                                         ,fromText
+                                         ,toText
+                                         ,toText'
                                          ,toPrelude
                                          ,fromPrelude
                                          ,addSlash
@@ -42,8 +41,7 @@ instance Show CanonicalPath where
   showsPrec d path =
     showParen (d > 15)
               (showString "CanonicalPath " .
-               shows (toText path))
-    where toText (CanonicalPath p) = pathToText p
+               shows (toText' path))
 
 {-|
 Unsafe constructor of @CanonicalPath@. In case of any problem it will @error@.
@@ -67,7 +65,7 @@ Version of @canonicalPath@ that takes @Text@ instead of @UnsafePath@.
 /Since 0.2.1.0/
 -}
 canonicalPath' :: MonadIO m => Text -> m CanonicalPath
-canonicalPath' = canonicalPath . textToPath
+canonicalPath' = canonicalPath . fromText
 
 {-|
 Constructs @Maybe CanonicalPath@.
@@ -89,7 +87,7 @@ Version of @canonicalPathM@ that takes @Text@ instead of @UnsafePath@.
 /Since 0.2.1.0/
 -}
 canonicalPathM' :: MonadIO m => Text -> m (Maybe CanonicalPath)
-canonicalPathM' = canonicalPathM . textToPath
+canonicalPathM' = canonicalPathM . fromText
 
 {-|
 Constructs @Either Text CanonicalPath@.
@@ -111,7 +109,7 @@ Version of @canonicalPathE@ that takes @Text@ instead of @UnsafePath@.
 /Since 0.2.1.0/
 -}
 canonicalPathE' :: MonadIO m => Text -> m (Either Text CanonicalPath)
-canonicalPathE' = canonicalPathE . textToPath
+canonicalPathE' = canonicalPathE . fromText
 
 -- | Convert @CanonicalPath@ to @Filesystem.FilePath@.
 --
@@ -135,7 +133,7 @@ canonicalize' fp =
   do exists <- liftIO $ liftM2 (||) (doesFileExist . toPrelude $ fp) (doesDirectoryExist . toPrelude $ fp)
      if exists
         then liftIO $ liftM Right (pathMap canonicalizePath fp)
-        else return . Left $ "Path does not exist (no such file or directory): " ++ pathToText fp
+        else return . Left $ "Path does not exist (no such file or directory): " ++ toText fp
 
 extractPath :: MonadIO m => UnsafePath -> m SafePath
 extractPath = liftM concatPath . mapM extractAtom . FilePath.splitDirectories
@@ -157,7 +155,7 @@ tryEnvWindows x =
         (Just . getEnv . pathTail . pathInit $ x)
 
 tryHome :: MonadIO m => Parser m
-tryHome x = when' (textToPath "~" == x) (Just $ liftM Right homeDirectory)
+tryHome x = when' ("~" == x) (Just $ liftM Right homeDirectory)
 
 (<||>) :: MonadIO m => Parser m -> Parser m -> Parser m
 p1 <||> p2 = \v -> p1 v <|> p2 v
@@ -209,19 +207,19 @@ pathMap :: MonadIO m => (Prelude.FilePath -> m Prelude.FilePath) -> UnsafePath -
 pathMap f p = liftM fromPrelude (f . toPrelude $ p)
 
 hasPrefix :: Text -> UnsafePath -> Bool
-hasPrefix prefix path = prefix `Text.isPrefixOf` pathToText path
+hasPrefix prefix path = prefix `Text.isPrefixOf` toText path
 
 hasSuffix :: Text -> UnsafePath -> Bool
-hasSuffix suffix path = suffix `Text.isSuffixOf` pathToText path
+hasSuffix suffix path = suffix `Text.isSuffixOf` toText path
 
 pathTail :: UnsafePath -> UnsafePath
-pathTail = textToPath . Text.tail . pathToText
+pathTail = fromText . Text.tail . toText
 
 pathInit :: UnsafePath -> UnsafePath
-pathInit = textToPath . Text.init . pathToText
+pathInit = fromText . Text.init . toText
 
 addSlash :: UnsafePath -> UnsafePath
-addSlash = textToPath . (++ "/") . pathToText
+addSlash = fromText . (++ "/") . toText
 
 concatPath :: [SafePath] -> SafePath
 concatPath = foldl' (<//>) (Right "")
@@ -236,37 +234,37 @@ preludeMap f = f . toPrelude . unsafePath
 
 -- * Type conversions
 
--- | @'pathToText' path@ converts 'UnsafePath' /path/ to 'Text'. In case of eny problems it will throw error.
+-- | @'fromText' txt@ converts 'Text' to 'FilePath'. It just re-exports 'Filesystem.Path.CurrentOS.fromText'.
+--
+-- /Since 0.3.0.0/
+fromText :: Text -> UnsafePath
+fromText = FilePath.fromText
+
+-- | @'toText' path@ converts 'FilePath' /path/ to 'Text'. In case of any problems it will throw error.
 --
 -- See 'Filesystem.Path.CurrentOS.toText' function for details.
 --
--- /Since 0.1.2.0/
-pathToText :: UnsafePath -> Text
-pathToText = either (error . textToString) id . FilePath.toText
+-- /Since 0.3.0.0/
+toText :: UnsafePath -> Text
+toText = either (error . textToString) id . FilePath.toText
 
--- | @'textToPath' txt@ converts 'Text' to 'UnsafePath'.
+-- | @'toText'' path@ converts 'CanonicalPath' to 'Text'.
 --
--- /Since 0.1.2.0/
-textToPath :: Text -> UnsafePath
-textToPath = FilePath.fromText
-
--- | @'cpathToText' path@ converts 'CanonicalPath' to 'Text'.
---
--- /Since 0.2.3.0/
-cpathToText :: CanonicalPath -> Text
-cpathToText = pathToText . unsafePath
+-- /Since 0.3.0.0/
+toText' :: CanonicalPath -> Text
+toText' = toText . unsafePath
 
 -- | @'fromPrelude' fp'@ converts 'Prelude.FilePath' to 'UnsafePath'.
 --
 -- /Since 0.1.0.0/
 fromPrelude :: Prelude.FilePath -> UnsafePath
-fromPrelude = textToPath . Text.pack
+fromPrelude = fromText . Text.pack
 
 -- | @'toPrelude' up'@ converts 'UnsafePath' to 'Prelude.FilePath'.
 --
 -- /Since 0.1.0.0/
 toPrelude :: UnsafePath -> Prelude.FilePath
-toPrelude = Text.unpack . pathToText
+toPrelude = Text.unpack . toText
 
 voidM :: Monad m => m a -> m ()
 voidM a = a >> return ()
