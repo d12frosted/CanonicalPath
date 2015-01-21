@@ -8,7 +8,6 @@ module Filesystem.CanonicalPath.Internal (CanonicalPath(..)
                                          ,canonicalPathE
                                          ,canonicalPathE'
                                          ,unsafePath
-                                         ,SafePath
                                          ,Filesystem.CanonicalPath.Internal.readFile
                                          ,Filesystem.CanonicalPath.Internal.writeFile
                                          ,writeFile'
@@ -27,7 +26,7 @@ import           Control.Applicative as Applicative
 import           Control.Arrow (left)
 import           Data.Text ()
 import qualified Data.Text as Text
-import qualified Filesystem.Path.CurrentOS as FilePath
+import           Filesystem.Path.CurrentOS as FP
 import qualified Prelude
 import           System.Directory (getHomeDirectory
                                   ,canonicalizePath
@@ -35,7 +34,7 @@ import           System.Directory (getHomeDirectory
                                   ,doesFileExist)
 import qualified System.Environment as SE (getEnv)
 
-newtype CanonicalPath = CanonicalPath UnsafePath
+newtype CanonicalPath = CanonicalPath FilePath
 
 instance Show CanonicalPath where
   showsPrec d path =
@@ -56,11 +55,11 @@ CanonicalPath "/Users/your-user-name"
 
 /Since 0.1.0.0/
 -}
-canonicalPath :: MonadIO m => UnsafePath -> m CanonicalPath
+canonicalPath :: MonadIO m => FilePath -> m CanonicalPath
 canonicalPath path = canonicalize path >>= either (error . textToString) (return . CanonicalPath)
 
 {-|
-Version of @canonicalPath@ that takes @Text@ instead of @UnsafePath@.
+Version of @canonicalPath@ that takes @Text@ instead of @FilePath@.
 
 /Since 0.2.1.0/
 -}
@@ -78,11 +77,11 @@ Nothing
 
 /Since 0.1.0.0/
 -}
-canonicalPathM :: MonadIO m => UnsafePath -> m (Maybe CanonicalPath)
+canonicalPathM :: MonadIO m => FilePath -> m (Maybe CanonicalPath)
 canonicalPathM path = canonicalize path >>= either (\_ -> return Nothing) (return . Just . CanonicalPath)
 
 {-|
-Version of @canonicalPathM@ that takes @Text@ instead of @UnsafePath@.
+Version of @canonicalPathM@ that takes @Text@ instead of @FilePath@.
 
 /Since 0.2.1.0/
 -}
@@ -100,11 +99,11 @@ Left "Path does not exist (no such file or directory): /Users/your-user-name/thi
 
 /Since 0.1.0.0/
 -}
-canonicalPathE :: MonadIO m => UnsafePath -> m (Either Text CanonicalPath)
+canonicalPathE :: MonadIO m => FilePath -> m (Either Text CanonicalPath)
 canonicalPathE path = canonicalize path >>= either (return . Left) (return . Right . CanonicalPath)
 
 {-|
-Version of @canonicalPathE@ that takes @Text@ instead of @UnsafePath@.
+Version of @canonicalPathE@ that takes @Text@ instead of @FilePath@.
 
 /Since 0.2.1.0/
 -}
@@ -114,36 +113,30 @@ canonicalPathE' = canonicalPathE . fromText
 -- | Convert @CanonicalPath@ to @Filesystem.FilePath@.
 --
 -- /Since 0.1.0.0/
-unsafePath :: CanonicalPath -> UnsafePath
+unsafePath :: CanonicalPath -> FilePath
 unsafePath (CanonicalPath up) = up
-
--- | Synonym of @FilePath@ from @Filesystem.Path@ module.
---
--- /Since 0.1.0.0/
-type UnsafePath = FilePath.FilePath
-type SafePath = Either Text UnsafePath
 
 -- * Functions used for canonicalization
 
-canonicalize :: MonadIO m => UnsafePath -> m SafePath
+canonicalize :: MonadIO m => FilePath -> m (Either Text FilePath)
 canonicalize fp = extractPath fp >>= either (return . Left) canonicalize'
 
-canonicalize' :: MonadIO m => UnsafePath -> m SafePath
+canonicalize' :: MonadIO m => FilePath -> m (Either Text FilePath)
 canonicalize' fp =
   do exists <- liftIO $ liftM2 (||) (doesFileExist . toPrelude $ fp) (doesDirectoryExist . toPrelude $ fp)
      if exists
         then liftIO $ liftM Right (pathMap canonicalizePath fp)
-        else return . Left $ "Path does not exist (no such file or directory): " ++ toText fp
+        else return . Left $ "Path does not exist (no such file or directory): " ++ toTextUnsafe fp
 
-extractPath :: MonadIO m => UnsafePath -> m SafePath
-extractPath = liftM concatPath . mapM extractAtom . FilePath.splitDirectories
+extractPath :: MonadIO m => FilePath -> m (Either Text FilePath)
+extractPath = liftM concatPath . mapM extractAtom . FP.splitDirectories
 
-extractAtom :: MonadIO m => UnsafePath -> m SafePath
+extractAtom :: MonadIO m => FilePath -> m (Either Text FilePath)
 extractAtom atom = tryEnvPosix <||> tryEnvWindows <||> tryHome <%> atom
 
 -- * Parsers and parser combinators
 
-type Parser m = UnsafePath -> Maybe (m SafePath)
+type Parser m = FilePath -> Maybe (m (Either Text FilePath))
 
 tryEnvPosix :: MonadIO m => Parser m
 tryEnvPosix x = when' (hasPrefix "$" x) (Just . getEnv . pathTail $ x)
@@ -160,7 +153,7 @@ tryHome x = when' ("~" == x) (Just $ liftM Right homeDirectory)
 (<||>) :: MonadIO m => Parser m -> Parser m -> Parser m
 p1 <||> p2 = \v -> p1 v <|> p2 v
 
-(<%>) :: MonadIO m => Parser m -> UnsafePath -> m SafePath
+(<%>) :: MonadIO m => Parser m -> FilePath -> m (Either Text FilePath)
 p <%> v = fromMaybe (return . Right $ v) (p v)
 
 -- * File operations
@@ -180,7 +173,7 @@ writeFile p = liftIO . BasicPrelude.writeFile (unsafePath p)
 -- | @'writeFile'' dir file txt@ writes /txt/ to the /dir\/file/. Useful, when the file isn't created yet or you don't sure if it exists.
 --
 -- /Since 0.1.2.0/
-writeFile' :: MonadIO m => CanonicalPath -> UnsafePath -> Text -> m ()
+writeFile' :: MonadIO m => CanonicalPath -> FilePath -> Text -> m ()
 writeFile' cp file = liftIO . BasicPrelude.writeFile (unsafePath cp </> file)
 
 -- | @'appendFile' file txt@ appends /txt/ to the /file/.
@@ -191,40 +184,40 @@ appendFile p = liftIO . BasicPrelude.appendFile (unsafePath p)
 
 -- * Utilities
 
-getEnv :: MonadIO m => UnsafePath -> m SafePath
+getEnv :: MonadIO m => FilePath -> m (Either Text FilePath)
 getEnv var = liftM (left show) tryEnv
   where env = pathMap SE.getEnv
-        tryEnv :: MonadIO m => m (Either IOException UnsafePath)
+        tryEnv :: MonadIO m => m (Either IOException FilePath)
         tryEnv = liftIO . try . env $ var
 
-homeDirectory :: MonadIO m => m UnsafePath
+homeDirectory :: MonadIO m => m FilePath
 homeDirectory = liftIO $ fromPrelude <$> getHomeDirectory
 
 when' :: Alternative f => Bool -> f a -> f a
 when' b v = if b then v else Applicative.empty
 
-pathMap :: MonadIO m => (Prelude.FilePath -> m Prelude.FilePath) -> UnsafePath -> m UnsafePath
+pathMap :: MonadIO m => (Prelude.FilePath -> m Prelude.FilePath) -> FilePath -> m FilePath
 pathMap f p = liftM fromPrelude (f . toPrelude $ p)
 
-hasPrefix :: Text -> UnsafePath -> Bool
-hasPrefix prefix path = prefix `Text.isPrefixOf` toText path
+hasPrefix :: Text -> FilePath -> Bool
+hasPrefix prefix path = prefix `Text.isPrefixOf` toTextUnsafe path
 
-hasSuffix :: Text -> UnsafePath -> Bool
-hasSuffix suffix path = suffix `Text.isSuffixOf` toText path
+hasSuffix :: Text -> FilePath -> Bool
+hasSuffix suffix path = suffix `Text.isSuffixOf` toTextUnsafe path
 
-pathTail :: UnsafePath -> UnsafePath
-pathTail = fromText . Text.tail . toText
+pathTail :: FilePath -> FilePath
+pathTail = fromText . Text.tail . toTextUnsafe
 
-pathInit :: UnsafePath -> UnsafePath
-pathInit = fromText . Text.init . toText
+pathInit :: FilePath -> FilePath
+pathInit = fromText . Text.init . toTextUnsafe
 
-addSlash :: UnsafePath -> UnsafePath
-addSlash = fromText . (++ "/") . toText
+addSlash :: FilePath -> FilePath
+addSlash = fromText . (++ "/") . toTextUnsafe
 
-concatPath :: [SafePath] -> SafePath
+concatPath :: [Either Text FilePath] -> Either Text FilePath
 concatPath = foldl' (<//>) (Right "")
 
-(<//>) :: SafePath -> SafePath -> SafePath
+(<//>) :: Either Text FilePath -> Either Text FilePath -> Either Text FilePath
 (<//>) l@(Left _) _ = l
 (<//>) _ l@(Left _) = l
 (<//>) (Right a) (Right b) = Right $ a </> b
@@ -232,39 +225,31 @@ concatPath = foldl' (<//>) (Right "")
 preludeMap :: (Prelude.FilePath -> a) -> CanonicalPath -> a
 preludeMap f = f . toPrelude . unsafePath
 
--- * Type conversions
-
--- | @'fromText' txt@ converts 'Text' to 'FilePath'. It just re-exports 'Filesystem.Path.CurrentOS.fromText'.
---
--- /Since 0.3.0.0/
-fromText :: Text -> UnsafePath
-fromText = FilePath.fromText
-
 -- | @'toText' path@ converts 'FilePath' /path/ to 'Text'. In case of any problems it will throw error.
 --
 -- See 'Filesystem.Path.CurrentOS.toText' function for details.
 --
 -- /Since 0.3.0.0/
-toText :: UnsafePath -> Text
-toText = either (error . textToString) id . FilePath.toText
+toTextUnsafe :: FilePath -> Text
+toTextUnsafe = either (error . textToString) id . FP.toText
 
 -- | @'toText'' path@ converts 'CanonicalPath' to 'Text'.
 --
 -- /Since 0.3.0.0/
 toText' :: CanonicalPath -> Text
-toText' = toText . unsafePath
+toText' = toTextUnsafe . unsafePath
 
--- | @'fromPrelude' fp'@ converts 'Prelude.FilePath' to 'UnsafePath'.
+-- | @'fromPrelude' fp'@ converts 'Prelude.FilePath' to 'FilePath'.
 --
 -- /Since 0.1.0.0/
-fromPrelude :: Prelude.FilePath -> UnsafePath
+fromPrelude :: Prelude.FilePath -> FilePath
 fromPrelude = fromText . Text.pack
 
--- | @'toPrelude' up'@ converts 'UnsafePath' to 'Prelude.FilePath'.
+-- | @'toPrelude' up'@ converts 'FilePath' to 'Prelude.FilePath'.
 --
 -- /Since 0.1.0.0/
-toPrelude :: UnsafePath -> Prelude.FilePath
-toPrelude = Text.unpack . toText
+toPrelude :: FilePath -> Prelude.FilePath
+toPrelude = Text.unpack . toTextUnsafe
 
 voidM :: Monad m => m a -> m ()
 voidM a = a >> return ()

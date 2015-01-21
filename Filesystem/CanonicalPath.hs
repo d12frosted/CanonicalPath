@@ -41,6 +41,8 @@ module Filesystem.CanonicalPath
   -- * Conversion functions
   ,fromText
   ,toText
-  ,toText') where
+  ,toText'
+  ,fromPrelude
+  ,toPrelude) where
 
 import Filesystem.CanonicalPath.Internal
