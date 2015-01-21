@@ -18,15 +18,14 @@ module Filesystem.CanonicalPath.Internal (CanonicalPath(..)
                                          ,toText'
                                          ,toPrelude
                                          ,fromPrelude
-                                         ,addSlash
                                          ,voidM) where
 
 import           BasicPrelude
 import           Control.Applicative as Applicative
-import           Control.Arrow (left)
+import           Control.Arrow (left, right)
 import           Data.Text ()
 import qualified Data.Text as Text
-import           Filesystem.Path.CurrentOS as FP
+import           Filesystem.Path.CurrentOS
 import qualified Prelude
 import           System.Directory (getHomeDirectory
                                   ,canonicalizePath
@@ -121,31 +120,35 @@ unsafePath (CanonicalPath up) = up
 canonicalize :: MonadIO m => FilePath -> m (Either Text FilePath)
 canonicalize fp = extractPath fp >>= either (return . Left) canonicalize'
 
-canonicalize' :: MonadIO m => FilePath -> m (Either Text FilePath)
-canonicalize' fp =
-  do exists <- liftIO $ liftM2 (||) (doesFileExist . toPrelude $ fp) (doesDirectoryExist . toPrelude $ fp)
+canonicalize' :: MonadIO m => Text -> m (Either Text FilePath)
+canonicalize' path =
+  let ps = textToString path in
+  do exists <- doesPathExist ps
      if exists
-        then liftIO $ liftM Right (pathMap canonicalizePath fp)
-        else return . Left $ "Path does not exist (no such file or directory): " ++ toTextUnsafe fp
+        then liftIO $ liftM (Right . fromPrelude) (canonicalizePath ps)
+        else return . Left $ "Path does not exist (no such file or directory): " ++ path
 
-extractPath :: MonadIO m => FilePath -> m (Either Text FilePath)
-extractPath = liftM concatPath . mapM extractAtom . FP.splitDirectories
+extractPath :: MonadIO m => FilePath -> m (Either Text Text)
+extractPath = liftM concatPath . mapM (extractAtom . toTextUnsafe) . splitDirectories
 
-extractAtom :: MonadIO m => FilePath -> m (Either Text FilePath)
-extractAtom atom = tryEnvPosix <||> tryEnvWindows <||> tryHome <%> atom
+extractAtom :: MonadIO m => Text -> m (Either Text Text)
+extractAtom atom = tryEnvPosix <||> tryHome <||> tryEnvWindows <%> atom
+
+doesPathExist :: MonadIO m => String -> m Bool
+doesPathExist p = liftIO $ liftM2 (||) (doesFileExist p) (doesDirectoryExist p)
 
 -- * Parsers and parser combinators
 
-type Parser m = FilePath -> Maybe (m (Either Text FilePath))
+type Parser m = Text -> Maybe (m (Either Text Text))
 
 tryEnvPosix :: MonadIO m => Parser m
-tryEnvPosix x = when' (hasPrefix "$" x) (Just . getEnv . pathTail $ x)
+tryEnvPosix x = when' (Text.isPrefixOf "$" x) (Just . getEnv . Text.tail $ x)
 
 tryEnvWindows :: MonadIO m => Parser m
 tryEnvWindows x =
-  when' (hasPrefix "%" x &&
-         hasSuffix "%" x)
-        (Just . getEnv . pathTail . pathInit $ x)
+  when' (Text.isPrefixOf "%" x &&
+         Text.isSuffixOf "%" x)
+        (Just . getEnv . Text.tail . Text.init $ x)
 
 tryHome :: MonadIO m => Parser m
 tryHome x = when' ("~" == x) (Just $ liftM Right homeDirectory)
@@ -153,7 +156,7 @@ tryHome x = when' ("~" == x) (Just $ liftM Right homeDirectory)
 (<||>) :: MonadIO m => Parser m -> Parser m -> Parser m
 p1 <||> p2 = \v -> p1 v <|> p2 v
 
-(<%>) :: MonadIO m => Parser m -> FilePath -> m (Either Text FilePath)
+(<%>) :: MonadIO m => Parser m -> Text -> m (Either Text Text)
 p <%> v = fromMaybe (return . Right $ v) (p v)
 
 -- * File operations
@@ -184,43 +187,19 @@ appendFile p = liftIO . BasicPrelude.appendFile (unsafePath p)
 
 -- * Utilities
 
-getEnv :: MonadIO m => FilePath -> m (Either Text FilePath)
-getEnv var = liftM (left show) tryEnv
-  where env = pathMap SE.getEnv
-        tryEnv :: MonadIO m => m (Either IOException FilePath)
-        tryEnv = liftIO . try . env $ var
+getEnv :: MonadIO m => Text -> m (Either Text Text)
+getEnv = liftIO . liftM (left show . right fromString) . tryEnv . textToString
+  where tryEnv :: String -> IO (Either IOException String)
+        tryEnv = try . SE.getEnv
 
-homeDirectory :: MonadIO m => m FilePath
-homeDirectory = liftIO $ fromPrelude <$> getHomeDirectory
+homeDirectory :: MonadIO m => m Text
+homeDirectory = liftIO $ fromString <$> getHomeDirectory
 
 when' :: Alternative f => Bool -> f a -> f a
 when' b v = if b then v else Applicative.empty
 
-pathMap :: MonadIO m => (Prelude.FilePath -> m Prelude.FilePath) -> FilePath -> m FilePath
-pathMap f p = liftM fromPrelude (f . toPrelude $ p)
-
-hasPrefix :: Text -> FilePath -> Bool
-hasPrefix prefix path = prefix `Text.isPrefixOf` toTextUnsafe path
-
-hasSuffix :: Text -> FilePath -> Bool
-hasSuffix suffix path = suffix `Text.isSuffixOf` toTextUnsafe path
-
-pathTail :: FilePath -> FilePath
-pathTail = fromText . Text.tail . toTextUnsafe
-
-pathInit :: FilePath -> FilePath
-pathInit = fromText . Text.init . toTextUnsafe
-
-addSlash :: FilePath -> FilePath
-addSlash = fromText . (++ "/") . toTextUnsafe
-
-concatPath :: [Either Text FilePath] -> Either Text FilePath
-concatPath = foldl' (<//>) (Right "")
-
-(<//>) :: Either Text FilePath -> Either Text FilePath -> Either Text FilePath
-(<//>) l@(Left _) _ = l
-(<//>) _ l@(Left _) = l
-(<//>) (Right a) (Right b) = Right $ a </> b
+concatPath :: [Either Text Text] -> Either Text Text
+concatPath = (right (Text.intercalate "/")) . sequence
 
 preludeMap :: (Prelude.FilePath -> a) -> CanonicalPath -> a
 preludeMap f = f . toPrelude . unsafePath
@@ -231,7 +210,7 @@ preludeMap f = f . toPrelude . unsafePath
 --
 -- /Since 0.3.0.0/
 toTextUnsafe :: FilePath -> Text
-toTextUnsafe = either (error . textToString) id . FP.toText
+toTextUnsafe = either (error . textToString) id . toText
 
 -- | @'toText'' path@ converts 'CanonicalPath' to 'Text'.
 --
