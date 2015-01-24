@@ -120,22 +120,18 @@ unsafePath (CanonicalPath up) = up
 canonicalize :: MonadIO m => FilePath -> m (Either Text FilePath)
 canonicalize fp = extractPath fp >>= either (return . Left) canonicalize'
 
+-- we do want exceptions from canonicalizePath
+-- also canonicalizePath will throw exception
+-- when @path does not exist
 canonicalize' :: MonadIO m => Text -> m (Either Text FilePath)
 canonicalize' path =
-  let ps = textToString path in
-  do exists <- doesPathExist ps
-     if exists
-        then liftIO $ liftM (Right . fromPrelude) (canonicalizePath ps)
-        else return . Left $ "Path does not exist (no such file or directory): " ++ path
+  liftIO $ liftM (right fromPrelude) (tryIO . canonicalizePath . textToString $ path)
 
 extractPath :: MonadIO m => FilePath -> m (Either Text Text)
 extractPath = liftM concatPath . mapM (extractAtom . toTextUnsafe) . splitDirectories
 
 extractAtom :: MonadIO m => Text -> m (Either Text Text)
 extractAtom atom = tryEnvPosix <||> tryHome <||> tryEnvWindows <%> atom
-
-doesPathExist :: MonadIO m => String -> m Bool
-doesPathExist p = liftIO $ liftM2 (||) (doesFileExist p) (doesDirectoryExist p)
 
 -- * Parsers and parser combinators
 
@@ -187,10 +183,13 @@ appendFile p = liftIO . BasicPrelude.appendFile (unsafePath p)
 
 -- * Utilities
 
+tryIO :: MonadIO m => IO a -> m (Either Text a)
+tryIO a = liftM (left show) (try' a)
+  where try' :: MonadIO m => IO a -> m (Either IOException a)
+        try' = liftIO . try
+
 getEnv :: MonadIO m => Text -> m (Either Text Text)
-getEnv = liftIO . liftM (left show . right fromString) . tryEnv . textToString
-  where tryEnv :: String -> IO (Either IOException String)
-        tryEnv = try . SE.getEnv
+getEnv = liftM (right fromString) . tryIO . SE.getEnv . textToString
 
 homeDirectory :: MonadIO m => m Text
 homeDirectory = liftIO $ fromString <$> getHomeDirectory
