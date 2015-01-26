@@ -107,7 +107,7 @@ renameDirectory :: MonadIO m
 renameDirectory cp p =
   do newPath <- canonicalPath $ parent p
      liftIO $ Directory.renameDirectory (toPrelude . unsafePath $ cp) (toPrelude p)
-     return . CanonicalPath $ unsafePath newPath </> dirname (addSlash p)
+     return . CanonicalPath $ unsafePath newPath </> dirname (p </> "")
 
 {-|
 Variant of @'renameDirectory' that ignores resulting @'CanonicalPath'.
