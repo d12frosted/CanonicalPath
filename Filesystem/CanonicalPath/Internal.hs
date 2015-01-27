@@ -28,12 +28,10 @@ import qualified Data.Text as Text
 import           Filesystem.Path.CurrentOS
 import qualified Prelude
 import           System.Directory (getHomeDirectory
-                                  ,canonicalizePath
-                                  ,doesDirectoryExist
-                                  ,doesFileExist)
+                                  ,canonicalizePath)
 import qualified System.Environment as SE (getEnv)
 
-newtype CanonicalPath = CanonicalPath FilePath
+newtype CanonicalPath = CanonicalPath FilePath deriving Eq
 
 instance Show CanonicalPath where
   showsPrec d path =
@@ -128,7 +126,7 @@ canonicalize' path =
   liftIO $ liftM (right fromPrelude) (tryIO . canonicalizePath . textToString $ path)
 
 extractPath :: MonadIO m => FilePath -> m (Either Text Text)
-extractPath = liftM concatPath . mapM (extractAtom . toTextUnsafe) . splitDirectories
+extractPath = liftM concatPath . mapM (extractAtom . toTextUnsafe) . splitDirectories . collapse
 
 extractAtom :: MonadIO m => Text -> m (Either Text Text)
 extractAtom atom = tryEnvPosix <||> tryHome <||> tryEnvWindows <%> atom
@@ -198,7 +196,8 @@ when' :: Alternative f => Bool -> f a -> f a
 when' b v = if b then v else Applicative.empty
 
 concatPath :: [Either Text Text] -> Either Text Text
-concatPath = (right (Text.intercalate "/")) . sequence
+-- concatPath = (right BasicPrelude.concat) . sequence
+concatPath = (right (("/" ++) . Text.intercalate "/")) . sequence . tail
 
 preludeMap :: (Prelude.FilePath -> a) -> CanonicalPath -> a
 preludeMap f = f . toPrelude . unsafePath
