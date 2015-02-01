@@ -196,8 +196,8 @@ when' :: Alternative f => Bool -> f a -> f a
 when' b v = if b then v else Applicative.empty
 
 concatPath :: [Either Text Text] -> Either Text Text
--- concatPath = (right BasicPrelude.concat) . sequence
-concatPath = (right (("/" ++) . Text.intercalate "/")) . sequence . tail
+-- concatPath = right BasicPrelude.concat . sequence
+concatPath = right (Text.intercalate "/") . sequence
 
 preludeMap :: (Prelude.FilePath -> a) -> CanonicalPath -> a
 preludeMap f = f . toPrelude . unsafePath
