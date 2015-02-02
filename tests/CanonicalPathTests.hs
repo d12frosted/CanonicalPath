@@ -44,6 +44,7 @@ testConstructor =
      $expect $ check "dir/ab/../../dir/ab/./../file1.txt" "dir/file1.txt"
 
      $expect $ equal' (canonicalize "$HOME") (liftM Right getHomeDirectory)
+     $expect $ equal' (canonicalize "$HOME/") (liftM Right getHomeDirectory)
      $expect $ equal' (canonicalize "~/") (liftM Right getHomeDirectory)
 
 -- Helper functions
