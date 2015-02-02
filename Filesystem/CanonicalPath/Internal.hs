@@ -126,7 +126,7 @@ canonicalize' path =
   liftIO $ liftM (right fromPrelude) (tryIO . canonicalizePath . textToString $ path)
 
 extractPath :: MonadIO m => FilePath -> m (Either Text Text)
-extractPath = liftM concatPath . mapM (extractAtom . toTextUnsafe) . splitDirectories . collapse
+extractPath = liftM (right concatPath . sequence) . mapM extractAtom . splitPath . toTextUnsafe . collapse
 
 extractAtom :: MonadIO m => Text -> m (Either Text Text)
 extractAtom atom = tryEnvPosix <||> tryHome <||> tryEnvWindows <%> atom
@@ -195,9 +195,15 @@ homeDirectory = liftIO $ fromString <$> getHomeDirectory
 when' :: Alternative f => Bool -> f a -> f a
 when' b v = if b then v else Applicative.empty
 
-concatPath :: [Either Text Text] -> Either Text Text
+splitPath :: Text -> [Text]
+splitPath = Text.splitOn "/"
+
+concatPath :: [Text] -> Text
+concatPath = Text.intercalate "/"
+
+-- concatPath :: [Either Text Text] -> Either Text Text
 -- concatPath = right BasicPrelude.concat . sequence
-concatPath = right (Text.intercalate "/") . sequence
+-- concatPath = right (Text.intercalate "/") . sequence
 
 preludeMap :: (Prelude.FilePath -> a) -> CanonicalPath -> a
 preludeMap f = f . toPrelude . unsafePath
