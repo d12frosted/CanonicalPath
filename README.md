@@ -1,5 +1,7 @@
 # CanonicalPath
 
+![](https://travis-ci.org/d12frosted/CanonicalPath.svg?branch=master)
+
 `Prelude.FilePath` is just synonym for `String`, so actually it can be anything - your mothers name or path to file you want to edit. Just look at type signature of function `readFile :: FilePath -> IO String which` can be converted to `readFile :: String -> IO String`. You can't be sure that it wont break your program in runtime.
 
 OK, you can use `FilePath` data type from `Filesystem.Path` module instead of `Prelude.FilePath`. I really like this data type but it has the same problem as `Prelude.FilePath` - you can't be sure, that it holds actual path to some file or directory on your system.
