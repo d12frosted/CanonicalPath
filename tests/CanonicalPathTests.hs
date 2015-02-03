@@ -33,8 +33,11 @@ testConstructor =
      $expect $ left' (canonicalize' "dir/ab/../../dir/ab/./../file1.tx")
      $expect $ left' (canonicalize' deepFile)
 
+     $expect $ check "dir/" "dir"
      $expect $ check "dir" "dir"
-     $expect $ check "file/" "file"
+     $expect $ check "file" "file"
+     -- check "file/" "file" will fail on linux
+     -- but will not fail on os x
      $expect $ check "dir/file1.txt" "dir/file1.txt"
      $expect $ check "dir/ab/" "dir/ab"
      $expect $ check "dir/file" "dir/file"
