@@ -21,10 +21,10 @@ library
 
   other-extensions:  OverloadedStrings
 
-  build-depends:     base >=4.7 && < 4.9
+  build-depends:     base >= 4.7 && < 4.9
                    , basic-prelude
-                   , directory
-                   , system-filepath
+                   , directory >= 1.2
+                   , system-filepath >= 0.4
                    , text
 
   ghc-options:       -Wall -O2
