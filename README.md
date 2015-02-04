@@ -1,6 +1,7 @@
 # CanonicalPath
 
-![](https://travis-ci.org/d12frosted/CanonicalPath.svg?branch=master)
+![](https://img.shields.io/travis/d12frosted/CanonicalPath.svg)
+![](https://img.shields.io/hackage/v/system-canonicalpath.svg)
 
 `FilePath` is very deceptive, because it's just a synonym for `String`, so actually it can be anything - your mothers name or path to file you want to edit. Just look at the type signature of function `readFile`:
 
