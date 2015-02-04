@@ -1,3 +1,15 @@
+0.3.0.0:
+* remove `UnsafePath` data type. It was synonym to `FilePath` and was confusing me sometimes, so I decided to cut it off
+* rename `cpathToText` to `toText'`
+* remove `pathToText` and `textToPath`
+* export `toText` and `fromText` from `Filesystem.Path.CurrentOS`
+* export `fromPrelude` and `toPrelude` functions
+* improve performance (path canonicalization now is performed 1.6x faster than before)
+* improve `canonicalPath` error messages. Most important - now it respects errors from `System.Directory.canonicalizePath`
+* add tests
+* add travis support
+* update documentation
+
 0.2.3.0:
 * add `cpathToText` that converts `CanonicalPath` to `Text`
 * update base version constraints
