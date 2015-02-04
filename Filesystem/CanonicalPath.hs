@@ -3,16 +3,24 @@ Module      : Filesystem.CanonicalPath
 Copyright   : (c) Boris Buliga, 2014
 License     : MIT
 Maintainer  : d12frosted@icloud.com
-Stability   : stable
-Portability : portable
+Stability   : experimental
+Portability : POSIX
 
-@Prelude.FilePath@ is just synonym for @String@, so actually it can be anything - your mothers name or path to file you want to edit. Just look at type signature of function @readFile :: FilePath -> IO String@ which can be converted to @readFile :: String -> IO String@. You can't be sure that it wont break your program in runtime.
+'Prelude.FilePath' is very deceptive, because it's just a synonym for 'Prelude.String', so actually it can be anything - your mothers name or path to file you want to edit. Just look at the type signature of function 'Prelude.readFile':
 
-OK, you can use @FilePath@ data type from @Filesystem.Path@ module instead of @Prelude.FilePath@. I really like this data type but it has the same problem as @Prelude.FilePath@ - you can't be sure, that it holds actual path to some file or directory on your system.
+@readFile :: FilePath -> IO String@
 
-So here comes abstract type @CanonicalPath@. It solves main problem - @CanonicalPath@ points to existing file or directory. Well, to be honest, it can't guarantee that this path will refer to existing file or directory always (someone can remove or move it to another path - and it's almost impossible to be aware of such cruelty) - hopefully you can always check if @CanonicalPath@ is not /broken/ (using composition of any constructor and 'unsafePath'). But in most cases @CanonicalPath@ will help you avoid many problems and will make your routine less routine.
+You can translate it as follows:
 
-Oh, and last but not least, @CanonicalPath@ constructor extracts all environment variables. Also it treats @~@ as home directory.
+@readFile :: String -> IO String@
+
+Well, it is known that 'IO' actions are dangerous by themselves. And here comes another problem - you need to be sure that the path you pass to function is at least well constructed. For this purpose you can use well known `Filesystem.Path.FilePath` data type. It solves a lot of problems and comes beefed with multiple cool utilities. And also it is build around 'Data.Text' instead of 'Prelude.String'. Awesome!
+
+So why do we need yet another path library? The answer is simple - we want to use paths like @$HOME\/.app.cfg@, @~\/.zshrc@ or @\/full\/path\/to\/existing\/file\/or\/dir@ in our code without any additional overhead. 'CanonicalPath' is named so because it tries to canonicalize given path ('Filesystem.Path.FilePath' or 'Data.Text') using 'System.Directory.canonicalizePath` function. It also will extract any variables it finds in path (like @$VARNAME@, @%VARNAME%@ and special @~\/@). But these steps both may fail. Thats why this library provide functions that return @'Prelude.Maybe' 'CanonicalPath'@ or @'Prelude.Either' 'Data.Text' 'CanonicalPath'@.
+
+'CanonicalPath' also comes with additional useful property. When it is created, it points to real file or directory. Honestly, it can't guarantee that this path will refer to existing file or directory always (someone can remove or move it to another path - and it's almost impossible to be aware of such cruelty), but you can always reconstruct 'CanonicalPath'.
+
+One more thing about path canonicalization. As I mentioned before, under the hood it uses 'System.Directory.canonicalizePath' function. So here are two warnings. Firstly, it behaves differently on different platforms. Sometime too damn differently. So you better watch your steps. Secodly, it's impossible to guarantee that the implication @same file/dir \<=\> same canonicalizedPath@ holds in either direction: this function can make only a best-effort attempt.
 
 Happy Haskell Hacking!
 -}

@@ -40,7 +40,7 @@ instance Show CanonicalPath where
                shows (toText' path))
 
 {-|
-Unsafe constructor of @CanonicalPath@. In case of any problem it will @error@.
+Unsafe constructor of 'CanonicalPath'. In case of any problems it will 'error'.
 
 Example:
 
@@ -56,7 +56,7 @@ canonicalPath :: MonadIO m => FilePath -> m CanonicalPath
 canonicalPath path = canonicalize path >>= either (error . textToString) (return . CanonicalPath)
 
 {-|
-Version of @canonicalPath@ that takes @Text@ instead of @FilePath@.
+Version of 'canonicalPath' that takes 'Data.Text' instead of 'Filesystem.Path.FilePath'.
 
 /Since 0.2.1.0/
 -}
@@ -64,7 +64,7 @@ canonicalPath' :: MonadIO m => Text -> m CanonicalPath
 canonicalPath' = canonicalPath . fromText
 
 {-|
-Constructs @Maybe CanonicalPath@.
+Constructs @'Maybe' 'CanonicalPath'@.
 
 >>> canonicalPathM "~"
 Just CanonicalPath "Users/your-user-name"
@@ -78,7 +78,7 @@ canonicalPathM :: MonadIO m => FilePath -> m (Maybe CanonicalPath)
 canonicalPathM path = canonicalize path >>= either (\_ -> return Nothing) (return . Just . CanonicalPath)
 
 {-|
-Version of @canonicalPathM@ that takes @Text@ instead of @FilePath@.
+Version of 'canonicalPathM' that takes 'Data.Text' instead of 'Filesystem.Path.FilePath'.
 
 /Since 0.2.1.0/
 -}
@@ -86,7 +86,7 @@ canonicalPathM' :: MonadIO m => Text -> m (Maybe CanonicalPath)
 canonicalPathM' = canonicalPathM . fromText
 
 {-|
-Constructs @Either Text CanonicalPath@.
+Constructs 'Prelude.Either' 'Data.Text' 'CanonicalPath'.
 
 >>> canonicalPathE "~/"
 Right CanonicalPath "/Users/your-user-name"
@@ -100,14 +100,14 @@ canonicalPathE :: MonadIO m => FilePath -> m (Either Text CanonicalPath)
 canonicalPathE path = canonicalize path >>= either (return . Left) (return . Right . CanonicalPath)
 
 {-|
-Version of @canonicalPathE@ that takes @Text@ instead of @FilePath@.
+Version of 'canonicalPathE' that takes 'Data.Text' instead of 'Filesystem.Path.FilePath'.
 
 /Since 0.2.1.0/
 -}
 canonicalPathE' :: MonadIO m => Text -> m (Either Text CanonicalPath)
 canonicalPathE' = canonicalPathE . fromText
 
--- | Convert @CanonicalPath@ to @Filesystem.FilePath@.
+-- | Convert 'CanonicalPath' to @Filesystem.FilePath@.
 --
 -- /Since 0.1.0.0/
 unsafePath :: CanonicalPath -> FilePath
@@ -155,25 +155,25 @@ p <%> v = fromMaybe (return . Right $ v) (p v)
 
 -- * File operations
 
--- | @'readFile' file@ function reads a /file/ and returns the contents of the /file/ as a @'Text'@. The /file/ is read lazily, on demand, as with getContents.
+-- | @readFile file@ function reads a /file/ and returns the contents of the /file/ as a 'Data.Text'. The /file/ is read lazily, on demand, as with getContents.
 --
 -- /Since 0.1.1.0/
 readFile :: MonadIO m => CanonicalPath -> m Text
 readFile = liftIO . BasicPrelude.readFile . unsafePath
 
--- | @'writeFile' file txt@ writes /txt/ to the /file/.
+-- | @writeFile file txt@ writes /txt/ to the /file/.
 --
 -- /Since 0.1.1.0/
 writeFile :: MonadIO m => CanonicalPath -> Text -> m ()
 writeFile p = liftIO . BasicPrelude.writeFile (unsafePath p)
 
--- | @'writeFile'' dir file txt@ writes /txt/ to the /dir\/file/. Useful, when the file isn't created yet or you don't sure if it exists.
+-- | @writeFile' dir file txt@ writes /txt/ to the /dir\/file/. Useful, when the file isn't created yet or you don't sure if it exists.
 --
 -- /Since 0.1.2.0/
 writeFile' :: MonadIO m => CanonicalPath -> FilePath -> Text -> m ()
 writeFile' cp file = liftIO . BasicPrelude.writeFile (unsafePath cp </> file)
 
--- | @'appendFile' file txt@ appends /txt/ to the /file/.
+-- | @appendFile file txt@ appends /txt/ to the /file/.
 --
 -- /Since 0.1.1.0/
 appendFile :: MonadIO m => CanonicalPath -> Text -> m ()
@@ -208,7 +208,7 @@ concatPath = Text.intercalate "/"
 preludeMap :: (Prelude.FilePath -> a) -> CanonicalPath -> a
 preludeMap f = f . toPrelude . unsafePath
 
--- | @'toText' path@ converts 'FilePath' /path/ to 'Text'. In case of any problems it will throw error.
+-- | @toText path@ converts 'Filesystem.FilePath' /path/ to 'Data.Text'. In case of any problems it will throw error.
 --
 -- See 'Filesystem.Path.CurrentOS.toText' function for details.
 --
@@ -216,19 +216,19 @@ preludeMap f = f . toPrelude . unsafePath
 toTextUnsafe :: FilePath -> Text
 toTextUnsafe = either (error . textToString) id . toText
 
--- | @'toText'' path@ converts 'CanonicalPath' to 'Text'.
+-- | @toText' path@ converts 'CanonicalPath' to 'Data.Text'.
 --
 -- /Since 0.3.0.0/
 toText' :: CanonicalPath -> Text
 toText' = toTextUnsafe . unsafePath
 
--- | @'fromPrelude' fp'@ converts 'Prelude.FilePath' to 'FilePath'.
+-- | @fromPrelude fp@ converts 'Prelude.FilePath' to 'Filesystem.Path.CurrentOS.toText'.
 --
 -- /Since 0.1.0.0/
 fromPrelude :: Prelude.FilePath -> FilePath
 fromPrelude = fromText . Text.pack
 
--- | @'toPrelude' up'@ converts 'FilePath' to 'Prelude.FilePath'.
+-- | @toPrelude up@ converts 'Filesystem.Path.FilePath' to 'Prelude.FilePath'.
 --
 -- /Since 0.1.0.0/
 toPrelude :: FilePath -> Prelude.FilePath

@@ -1,7 +1,7 @@
 name:                system-canonicalpath
 version:             0.3.0.0
-synopsis:            Abstract data type for canonical paths with pretty operations
-description:         This library provides abstract data type named 'CanonicalPath' and some useful functions for working with it. See every module's description to find out more.
+synopsis:            Abstract data type for canonical paths with some utilities
+description:         This library provides abstract data type named 'Filesystem.CanonicalPath.CanonicalPath' and some useful functions for working with it.
 homepage:            https://github.com/d12frosted/CanonicalPath
 license:             MIT
 license-file:        LICENSE
