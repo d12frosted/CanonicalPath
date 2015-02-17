@@ -27,4 +27,3 @@ install:
 script:
  - cabal update
  - cabal install --enable-tests
- - cabal test
