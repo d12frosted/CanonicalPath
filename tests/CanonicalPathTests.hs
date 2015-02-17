@@ -17,7 +17,9 @@ main =
 
 createTestFiles :: IO ()
 createTestFiles =
-  do wd <- getCurrentDirectory
+  do r <- canonicalPathE "test-root"
+     either (\_ -> return ()) removeDirectoryRecursive r
+     wd <- getCurrentDirectory
      root <- createDirectory wd "test-root"
      d1 <- createDirectory root "dir"
      d2 <- createDirectory d1 "ab"
