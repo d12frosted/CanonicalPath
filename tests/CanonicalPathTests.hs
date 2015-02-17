@@ -17,10 +17,10 @@ main =
 
 createTestFiles :: IO ()
 createTestFiles =
-  do r <- canonicalPathE "test-root"
+  do r <- canonicalPathE rootdir
      either (\_ -> return ()) removeDirectoryRecursive r
      wd <- getCurrentDirectory
-     root <- createDirectory wd "test-root"
+     root <- createDirectory wd rootdir
      d1 <- createDirectory root "dir"
      d2 <- createDirectory d1 "ab"
      createDirectory_ root "file-or-dir"
@@ -33,24 +33,22 @@ createTestFiles =
 testCanonicalPath :: Suite
 testCanonicalPath =
   suite "canonical path constructors" $
-  [testConstructor]
+  [testLeftSide
+  ,testRightSide
+  ,testVariables]
 
-testConstructor :: Test
-testConstructor =
-  assertions "canonicalPathE tests" $
-  do let left' v = v >>= \v' -> return $ left v'
-         equal' v w = do
-           v' <- v
-           w' <- w
-           return $ equal v' w'
-         check p1 p2 = equal' (canonicalize' p1) (liftM Right $ inCurrentDir p2)
+testLeftSide :: Test
+testLeftSide =
+  assertions "check for expected lefts" $
+  do $expect $ left' (mkPath' "diro/")
+     $expect $ left' (mkPath' "dir.txt")
+     $expect $ left' (mkPath' "dir/ab/../../dir/ab/./../file1.tx")
+     $expect $ left' (mkPath' deepFile)
 
-     $expect $ left' (canonicalize' "diro/")
-     $expect $ left' (canonicalize' "dir.txt")
-     $expect $ left' (canonicalize' "dir/ab/../../dir/ab/./../file1.tx")
-     $expect $ left' (canonicalize' deepFile)
-
-     $expect $ check "dir/" "dir"
+testRightSide :: Test
+testRightSide =
+  assertions "check for expected rights" $
+  do $expect $ check "dir/" "dir"
      $expect $ check "dir" "dir"
      $expect $ check "file" "file"
      -- check "file/" "file" will fail on linux
@@ -63,20 +61,42 @@ testConstructor =
      $expect $ check "dir/ab/./file2.txt" "dir/ab/file2.txt"
      $expect $ check "dir/ab/../../dir/ab/./../file1.txt" "dir/file1.txt"
 
-     $expect $ equal' (canonicalize "$HOME") (liftM Right getHomeDirectory)
-     $expect $ equal' (canonicalize "$HOME/") (liftM Right getHomeDirectory)
-     $expect $ equal' (canonicalize "~/") (liftM Right getHomeDirectory)
+testVariables :: Test
+testVariables =
+  assertions "check for extracting environment variables" $
+  do $expect $ equal' (mkPath "$HOME") (mkPath "~/")
+     $expect $ right' (mkPath "$TMPDIR")
+
+-- Chell helpers
+
+left' :: (Show b, Monad m) => m (Either a b) -> m Assertion
+left' v = v >>= \v' -> return $ left v'
+
+right' :: (Show a, Monad m) => m (Either a b) -> m Assertion
+right' v = v >>= \v' -> return $ right v'
+
+equal' :: (Show a, Monad m, Eq a) => m a -> m a -> m Assertion
+equal' v w = do
+  v' <- v
+  w' <- w
+  return $ equal v' w'
+
+check :: FilePath -> FilePath -> IO Assertion
+check p1 p2 = equal' (mkPath' p1) (liftM Right $ inCurrentDir p2)
 
 -- Helper functions
 
-canonicalize :: FilePath -> IO (Either Text CanonicalPath)
-canonicalize = canonicalPathE
+mkPath :: FilePath -> IO (Either Text CanonicalPath)
+mkPath = canonicalPathE
 
-canonicalize' :: FilePath -> IO (Either Text FilePath)
-canonicalize' p = inCurrentDir p >>= liftM (Arrow.right unsafePath) . canonicalize
+mkPath' :: FilePath -> IO (Either Text FilePath)
+mkPath' p = inCurrentDir p >>= liftM unsafe . mkPath
+
+unsafe :: Either Text CanonicalPath -> Either Text FilePath
+unsafe = Arrow.right unsafePath
 
 currentDir :: IO FilePath
-currentDir = liftM ((</> "test-root") . unsafePath) getCurrentDirectory
+currentDir = liftM ((</> rootdir) . unsafePath) getCurrentDirectory
 
 inCurrentDir :: FilePath -> IO FilePath
 inCurrentDir p =
@@ -85,3 +105,6 @@ inCurrentDir p =
 
 deepFile :: FilePath
 deepFile = concat $ replicate 500 "deep-hell"
+
+rootdir :: IsString a => a
+rootdir = "test-root"
