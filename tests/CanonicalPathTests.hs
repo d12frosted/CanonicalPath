@@ -11,7 +11,22 @@ import           Filesystem.CanonicalPath.Directory
 import           Test.Chell
 
 main :: IO ()
-main = defaultMain [testCanonicalPath]
+main =
+  do createTestFiles
+     defaultMain [testCanonicalPath]
+
+createTestFiles :: IO ()
+createTestFiles =
+  do wd <- getCurrentDirectory
+     root <- createDirectory wd "test-root"
+     d1 <- createDirectory root "dir"
+     d2 <- createDirectory d1 "ab"
+     createDirectory_ root "file-or-dir"
+     writeFile' root "file" ""
+     writeFile' d1 "file" ""
+     writeFile' d1 "file1.txt" ""
+     writeFile' d2 "file2.txt" ""
+     return ()
 
 testCanonicalPath :: Suite
 testCanonicalPath =
@@ -59,7 +74,7 @@ canonicalize' :: FilePath -> IO (Either Text FilePath)
 canonicalize' p = inCurrentDir p >>= liftM (Arrow.right unsafePath) . canonicalize
 
 currentDir :: IO FilePath
-currentDir = liftM ((</> "tests") . unsafePath) getCurrentDirectory
+currentDir = liftM ((</> "test-root") . unsafePath) getCurrentDirectory
 
 inCurrentDir :: FilePath -> IO FilePath
 inCurrentDir p =
