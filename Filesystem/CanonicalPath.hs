@@ -20,7 +20,7 @@ So why do we need yet another path library? The answer is simple - we want to us
 
 'CanonicalPath' also comes with additional useful property. When it is created, it points to real file or directory. Honestly, it can't guarantee that this path will refer to existing file or directory always (someone can remove or move it to another path - and it's almost impossible to be aware of such cruelty), but you can always reconstruct 'CanonicalPath'.
 
-One more thing about path canonicalization. As I mentioned before, under the hood it uses 'System.Directory.canonicalizePath' function. So here are two warnings. Firstly, it behaves differently on different platforms. Sometime too damn differently. So you better watch your steps. Secodly, it's impossible to guarantee that the implication @same file/dir \<=\> same canonicalizedPath@ holds in either direction: this function can make only a best-effort attempt.
+One more thing about path canonicalization. As I mentioned before, under the hood it uses 'System.Directory.canonicalizePath' function. So here are two warnings. Firstly, it behaves differently on different platforms. Sometime too damn differently. So you better watch your steps. Secondly, it's impossible to guarantee that the implication @same file/dir \<=\> same canonicalizedPath@ holds in either direction: this function can make only a best-effort attempt.
 
 Happy Haskell Hacking!
 -}
