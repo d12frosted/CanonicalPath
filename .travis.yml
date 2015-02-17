@@ -13,6 +13,7 @@ before_install:
  - travis_retry sudo apt-get update
  - travis_retry sudo apt-get install cabal-install-1.18 ghc-$GHCVER
  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/1.18/bin:$HOME/.cabal/bin:$PATH
+ - export TMPDIR=$HOME
  - |
    if [ $GHCVER = "head" ] || [ ${GHCVER%.*} = "7.8" ]; then
      travis_retry sudo apt-get install happy-1.19.4 alex-3.1.3
