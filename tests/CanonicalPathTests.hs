@@ -39,7 +39,7 @@ testCanonicalPath =
 
 testLeftSide :: Test
 testLeftSide =
-  assertions "check for expected lefts" $
+  assertions "test for expected lefts" $
   do $expect $ left' (mkPath' "diro/")
      $expect $ left' (mkPath' "dir.txt")
      $expect $ left' (mkPath' "dir/ab/../../dir/ab/./../file1.tx")
@@ -47,7 +47,7 @@ testLeftSide =
 
 testRightSide :: Test
 testRightSide =
-  assertions "check for expected rights" $
+  assertions "test for expected rights" $
   do $expect $ check "dir/" "dir"
      $expect $ check "dir" "dir"
      $expect $ check "file" "file"
@@ -63,8 +63,8 @@ testRightSide =
 
 testVariables :: Test
 testVariables =
-  assertions "check for extracting environment variables" $
-  do $expect $ equal' (mkPath "$HOME") (mkPath "~/")
+  assertions "test for extracting environment variables" $
+  do $expect $ equal' (mkPath "$HOME/") (mkPath "~/")
      $expect $ right' (mkPath "$TMPDIR")
 
 -- Chell helpers
