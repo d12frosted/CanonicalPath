@@ -65,15 +65,11 @@ testVariables :: Test
 testVariables =
   assertions "test for extracting environment variables" $
   do $expect $ equal' (mkPath "$HOME/") (mkPath "~/")
-     $expect $ right' (mkPath "$TMPDIR")
 
 -- Chell helpers
 
 left' :: (Show b, Monad m) => m (Either a b) -> m Assertion
 left' v = v >>= \v' -> return $ left v'
-
-right' :: (Show a, Monad m) => m (Either a b) -> m Assertion
-right' v = v >>= \v' -> return $ right v'
 
 equal' :: (Show a, Monad m, Eq a) => m a -> m a -> m Assertion
 equal' v w = do
