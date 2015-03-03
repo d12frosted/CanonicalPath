@@ -1,3 +1,9 @@
+0.3.2.0:
+* fix environment variables test suite
+
+0.3.1.0:
+* fix and update test suites
+
 0.3.0.0:
 * remove `UnsafePath` data type. It was synonym to `FilePath` and was confusing me sometimes, so I decided to cut it off
 * rename `cpathToText` to `toText'`
