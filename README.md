@@ -1,5 +1,11 @@
 # CanonicalPath
 
+**VERY IMPORTANT**
+
+Some time ago `system-filepath` was deprecated. I haven't updated this library since, because I still think about the reasons for it to exist. Actually I have some plans on rewriting it, but it will very breaking in terms of compatibility. Keep in touch.
+
+---
+
 ![](https://img.shields.io/travis/d12frosted/CanonicalPath.svg)
 ![](https://img.shields.io/hackage/v/system-canonicalpath.svg)
 
