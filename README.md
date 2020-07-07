@@ -4,6 +4,10 @@
 
 Some time ago `system-filepath` was deprecated. I haven't updated this library since, because I still think about the reasons for it to exist. Actually I have some plans on rewriting it, but it will very breaking in terms of compatibility. Keep in touch.
 
+**UPDATE**
+
+Please, checkout the [path-extra](https://github.com/d12frosted/path-extra) library that also knows how to canonicalize path.
+
 ---
 
 ![](https://img.shields.io/travis/d12frosted/CanonicalPath.svg)
